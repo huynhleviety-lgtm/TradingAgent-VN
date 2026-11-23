@@ -1,0 +1,13 @@
+# Optional: RAG answer-quality evaluation (python -m ta_core.libs.rag_engine eval).
+# Not needed to run the platform. Install on top of requirements.txt:
+#   pip install -r requirements-rag-eval.txt
+#
+# Paid-API warning: ta_core/libs/rag_engine/evaluate.py builds its judge with
+# langchain_openai.ChatOpenAI(...) and no base_url, which calls OpenAI's paid API
+# unless you point it at Ollama first, for example:
+#   set OPENAI_BASE_URL=http://127.0.0.1:11434/v1
+#   set OPENAI_API_KEY=ollama
+datasets
+ragas
+langchain-openai
+langchain-huggingface

@@ -26,7 +26,7 @@ from ta_core.workflows.utils import format_facts
 from ta_core.core.llm import call_llm
 
 
-def _render_transcript(messages: Sequence[LLMMessage]) -> str:
+def _render_transcript(messages: Sequence[LLMMessage | TextMessage]) -> str:
     lines: List[str] = []
     for msg in messages:
         if isinstance(msg, SystemMessage):
@@ -35,6 +35,12 @@ def _render_transcript(messages: Sequence[LLMMessage]) -> str:
             lines.append(f"[{msg.source}] {msg.content}")
         elif isinstance(msg, AssistantMessage):
             lines.append(f"[{msg.source}] {msg.content}")
+        elif isinstance(msg, TextMessage):
+            # RoundRobinGroupChat.run() returns autogen_agentchat TextMessage objects, not
+            # autogen_core messages: first the task (source "user"), then each Bull/Bear turn.
+            # The task is the prompt itself, so only the debaters' turns are kept.
+            if msg.source != "user":
+                lines.append(f"[{msg.source}] {msg.content}")
     return "\n".join(lines)
 
 

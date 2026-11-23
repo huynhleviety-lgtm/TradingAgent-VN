@@ -9,7 +9,11 @@ torchaudio==2.6.0
 
 # --- 2. AI & Agentic Frameworks (SOTA) ---
 openai>=1.0.0               # Call LLMs (Qwen3 / Gemini via proxy)
-autogen-agentchat>=0.4,<0.8     # Debate (AutoGen 0.4+ API: autogen_agentchat + autogen_core)
+# Bull/Bear debate (ta_core/workflows/debate/autogen_debate.py) imports both packages directly.
+# Tested on Python 3.12 with 0.4.9, 0.5.7, 0.6.4 and 0.7.5; 0.4.0 does not resolve.
+# Not pyautogen: that is the legacy 0.2 API (import autogen) and has no autogen_core.
+autogen-core>=0.4.9,<0.8
+autogen-agentchat>=0.4.9,<0.8
 pydantic>=2.0.0             # Governance Schema & Validation (Cognitive Trading)
 tiktoken                    # Cấu trúc Tokenizer
 transformers                # Huggingface Transformers
@@ -38,6 +42,11 @@ requests>=2.31.0            # Gọi HTTP (Fix lỗi version)
 aiohttp                     # Bất đồng bộ HTTP (Xử lý hàng loạt LLM calls)
 urllib3<2.0                 # Hạ version urllib3 xuống dưới 2.0 để sửa triệt để lỗi RequestsDependencyWarning
 charset-normalizer<4.0
+# News crawler (tracking_news): article text extraction, Vietnamese dates, HTTP retries
+trafilatura                 # tracking_news/app/sources/*.py
+dateparser                  # tracking_news/app/extract/datetime_utils.py
+python-dateutil             # tracking_news/app/extract/datetime_utils.py
+tenacity                    # tracking_news/app/extract/http_client.py
 
 # --- 6. Analytics, Web UI & Utils ---
 streamlit                   # Framework tạo UI Dashboard (Tùy chọn)
@@ -45,3 +54,9 @@ plotly                      # Vẽ biểu đồ tương tác (Interactive Charts
 jinja2                      # Engine Template cho HTML/Markdown
 python-dotenv               # Quản lý các biến môi trường (.env)
 pandas-ta
+mplfinance                  # ta_core/tools/chart_tool.py (candlestick charts)
+click                       # ta_core/libs/rag_engine/cli.py
+networkx                    # ta_core/libs/rag_engine/visualize.py
+pyvis                       # ta_core/libs/rag_engine/visualize.py (knowledge-graph HTML)
+mcp>=1.2,<2                 # v1 API (FastMCP); 2.x renamed it. MCP servers: ta_core/servers/financial_server.py, tracking_news/app/mcp_server.py
+# RAG evaluation (python -m ta_core.libs.rag_engine eval) is optional: requirements-rag-eval.txt

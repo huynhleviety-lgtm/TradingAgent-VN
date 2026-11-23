@@ -2,7 +2,6 @@ import click
 import asyncio
 from .ingest import run_ingest
 from .retrieval import query_func
-from .evaluate import run_eval
 
 @click.group()
 def cli():
@@ -29,6 +28,10 @@ def ask_cmd(question, mode):
 @click.option('--dir', default='data')
 def eval_cmd(dir):
     """Run Ragas evaluation."""
+    # Imported here: evaluation needs the optional packages in requirements-rag-eval.txt,
+    # and `index` / `ask` must keep working without them.
+    from .evaluate import run_eval
+
     run_eval(dir)
 
 if __name__ == '__main__':
