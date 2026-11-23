@@ -527,7 +527,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="News source to crawl. Default: cafef.",
     )
 
+    qlib_refresh = subparsers.add_parser(
+        "qlib-refresh",
+        help="Run Qlib Alpha158 + LightGBM in the Qlib environment and store scores in data/vnstock.db.",
+    )
+    qlib_refresh.add_argument("--qlib-python", default=None, help="Qlib environment's Python (default: QLIB_PYTHON).")
+    qlib_refresh.add_argument("--qlib-repo", default=None, help="Your Qlib checkout (default: QLIB_REPO_DIR or ../qlib).")
+    qlib_refresh.add_argument("--rounds", type=int, default=500, help="LightGBM boosting rounds.")
+
     return parser
+
+
+def handle_qlib_refresh(args: argparse.Namespace) -> None:
+    from ta_core.tools.qlib_scores import refresh
+
+    code = refresh(
+        qlib_python=args.qlib_python,
+        qlib_repo=Path(args.qlib_repo) if args.qlib_repo else None,
+        extra_args=["--rounds", str(args.rounds)],
+    )
+    if code != 0:
+        raise SystemExit(code)
 
 
 async def _main() -> None:
@@ -554,6 +574,8 @@ async def _main() -> None:
             handle_crawl_vnstock(args)
         elif args.command == "crawl-news":
             handle_crawl_news(args)
+        elif args.command == "qlib-refresh":
+            handle_qlib_refresh(args)
         else:  # pragma: no cover - argparse should guard this
             parser.error(f"Unsupported command: {args.command}")
     finally:

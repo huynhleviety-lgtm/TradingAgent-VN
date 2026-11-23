@@ -7,6 +7,19 @@ from ta_core.agents.prompting import BACKTEST_CONTEXT, TEXT_COT_PREFIX
 from ta_core.core.llm import call_llm
 
 
+def _qlib_line(result: dict) -> str:
+    """One prompt line for the Qlib model score, or a note that it is unavailable."""
+    if result.get("qlib_rank_pct") is None:
+        return "- Qlib Alpha158/LightGBM: chưa có điểm (chưa chạy `python run.py qlib-refresh`).\n"
+    ic = result.get("qlib_test_rank_ic")
+    ic_text = f"{ic:.3f}" if isinstance(ic, (int, float)) else "n/a"
+    return (
+        f"- Qlib Alpha158/LightGBM (ngày {result.get('qlib_score_date')}): xếp hạng "
+        f"{result['qlib_rank_pct'] * 100:.0f}/100 trong rổ; Rank IC kiểm định ngoài mẫu={ic_text} "
+        "(IC < 0.02 nghĩa là tín hiệu yếu, chỉ tham khảo).\n"
+    )
+
+
 class QuantAgent:
     async def analyze(self, *, ticker: str, ref_date: str) -> str:
         print(f"🤖 [Quant Agent] Tính Alpha cho {ticker} @ {ref_date}...")
@@ -46,6 +59,7 @@ class QuantAgent:
             f"  - Value (15%): PE={result.get('pe')}, PB={result.get('pb')}, score={result.get('value_score', 0.0):.2f}\n"
             f"  - Quality (15%): ROE={result.get('roe')}, ROA={result.get('roa')}, score={result.get('quality_score', 0.0):.2f}\n"
             f"- ATR14 (volatility for sizing): {result['atr14']:.4f}\n"
+            f"{_qlib_line(result)}"
             "- Pros: 3 gạch đầu dòng, kèm dữ liệu.\n"
             "- Cons: 3 gạch đầu dòng, kèm dữ liệu.\n"
             "- Gợi ý sizing: nhỏ khi ATR cao; tăng dần khi ATR giảm và alpha > 60.\n"

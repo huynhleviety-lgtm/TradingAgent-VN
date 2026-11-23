@@ -239,6 +239,12 @@ class QuantToolkit:
 
     def quick_report(self, ticker: str, ref_date: str) -> Dict[str, float | None | str]:
         res = self.calculate_alpha_score(ticker, ref_date)
+        try:
+            from ta_core.tools.qlib_scores import latest_score
+
+            qlib = latest_score(ticker, ref_date)
+        except Exception:  # pylint: disable=broad-except
+            qlib = None
         return {
             "ticker": res.ticker,
             "ref_date": res.ref_date.strftime("%Y-%m-%d"),
@@ -264,6 +270,11 @@ class QuantToolkit:
             "net_profit_yoy": self._round_optional(res.components.net_profit_yoy),
             "trailing_eps": self._round_optional(res.components.trailing_eps),
             "book_value_per_share": self._round_optional(res.components.book_value_per_share),
+            # Qlib Alpha158 + LightGBM cross-sectional score (None if Qlib has not run).
+            "qlib_score": self._round_optional(qlib["score"], 6) if qlib else None,
+            "qlib_rank_pct": self._round_optional(qlib["rank_pct"]) if qlib else None,
+            "qlib_score_date": qlib["date"] if qlib else None,
+            "qlib_test_rank_ic": self._round_optional(qlib["test_rank_ic"]) if qlib else None,
         }
 
 

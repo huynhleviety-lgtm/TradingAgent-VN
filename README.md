@@ -140,6 +140,7 @@ Entrypoint duy nhất là `run.py` (`python run.py --help`).
 |---|---|
 | `crawl-vnstock` | Sync/refresh OHLCV, khối ngoại, chỉ số tài chính vào `data/vnstock.db` (nguồn: vn-market-data — DNSE, Vietcap, CafeF, VNDirect, KBS; miễn phí). |
 | `crawl-news` | Crawl tin tức vào `data/news.db`. |
+| `qlib-refresh` | Chạy Qlib (Alpha158 + LightGBM) trong môi trường Python riêng, lưu điểm vào `data/vnstock.db` cho Quant agent. Xem [`qlib_bridge/README.md`](qlib_bridge/README.md). |
 | `sync` (alias `prepare`) | Đồng bộ giá + tin + cache báo cáo tài chính một lần. |
 | `analyze` | Sinh báo cáo phân tích tài chính Markdown. |
 | `rag index \| query \| dashboard` | Index / truy vấn / mở dashboard Financial RAG. |

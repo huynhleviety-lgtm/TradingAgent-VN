@@ -1,0 +1,14 @@
+# Separate Python environment for Qlib (Python 3.8-3.12; 3.11 recommended).
+# Do NOT install this into the main TradingAgent-VN environment: Qlib pins
+# packages that clash with the app's.
+#
+# PyPI wheel (no compiler needed on Windows):
+pyqlib==0.9.7
+# Qlib's MLflow file store stops working from MLflow 3.13; your Qlib fork pins
+# the same bound (huynhleviety-lgtm/qlib pyproject.toml).
+mlflow<3.13
+lightgbm
+pandas
+# Alternative: build from your fork instead of PyPI (needs Visual Studio Build
+# Tools on Windows for the Cython extensions):
+#   pip install -e ../qlib

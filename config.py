@@ -159,12 +159,26 @@ class PathConfig:
     )
 
 
+@dataclass(frozen=True)
+class QlibConfig:
+    """Qlib runs in its own Python environment; see qlib_bridge/README.md."""
+
+    # Python of the Qlib environment, e.g. .venv-qlib\Scripts\python.exe on Windows.
+    python: str | None = os.getenv("QLIB_PYTHON")
+    # Your Qlib checkout; its scripts/dump_bin.py converts prices to Qlib's format.
+    repo_dir: Path = field(
+        default_factory=lambda: _resolve_project_path(os.getenv("QLIB_REPO_DIR", str(PROJECT_ROOT.parent / "qlib")))
+    )
+    workdir: Path = field(default_factory=lambda: _resolve_project_path(os.getenv("QLIB_WORKDIR", "data/qlib")))
+
+
 trading = TradingConfig()
 strategy = StrategyThresholds()
 risk_limits = RiskLimits()
 workflow_weights = WorkflowWeights()
 models = ModelConfig()
 paths = PathConfig()
+qlib_settings = QlibConfig()
 paths.data_dir.mkdir(parents=True, exist_ok=True)
 
 __all__ = [
