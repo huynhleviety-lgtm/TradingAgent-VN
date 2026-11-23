@@ -96,3 +96,79 @@ export interface HistoryDetail {
   cio: Record<string, CIOResult>;
   report: string;
 }
+
+// ── System status (/api/system/status) ─────────────────────────────────────
+
+export interface LlmStatus {
+  base_url: string;
+  server?: "ollama" | "openai-compatible";
+  configured: Record<string, string>;
+  concurrency: number;
+  reachable: boolean;
+  available: string[];
+  missing: string[];
+  ok: boolean;
+  message: string;
+}
+
+export interface MarketDataStatus {
+  db_path: string;
+  cache_path: string;
+  cache_exists: boolean;
+  ok: boolean;
+  stocks: number;
+  indices: string[];
+  latest_date: string | null;
+  stale_days: number | null;
+  stale_tickers: string[];
+  ratio_tickers: number;
+  message: string;
+}
+
+export interface QlibRun {
+  run_at: string;
+  model: string;
+  train_start?: string;
+  train_end?: string;
+  valid_end?: string;
+  rank_ic_mean?: number | null;
+  rank_ic_ir?: number | null;
+  test_days?: number;
+}
+
+export interface QlibRefreshState {
+  running: boolean;
+  started_at: number | null;
+  finished_at: number | null;
+  exit_code: number | null;
+}
+
+export interface QlibStatus {
+  python: string | null;
+  python_ok: boolean;
+  repo_dir: string;
+  repo_ok: boolean;
+  last_run: QlibRun | null;
+  refresh: QlibRefreshState;
+  ok: boolean;
+  message: string;
+}
+
+export interface SystemStatus {
+  llm: LlmStatus;
+  market_data: MarketDataStatus;
+  qlib: QlibStatus;
+  checked_at: string;
+}
+
+export interface QlibScoreRow {
+  ticker: string;
+  score: number;
+  rank_pct: number;
+}
+
+export interface QlibScores {
+  date: string | null;
+  rows: QlibScoreRow[];
+  run: QlibRun | null;
+}

@@ -8,7 +8,7 @@ from bootstrap import ROOT, APP_DIR, APP_DATA_DIR  # noqa: F401  (also has side 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import analysis, history, market, portfolio
+from routers import analysis, history, market, portfolio, system
 
 app = FastAPI(title="Multi-Agent Stock Analyzer API", version="0.1.0")
 
@@ -23,6 +23,7 @@ app.include_router(analysis.router, prefix="/api")
 app.include_router(portfolio.router, prefix="/api")
 app.include_router(history.router, prefix="/api")
 app.include_router(market.router, prefix="/api")
+app.include_router(system.router, prefix="/api")
 
 
 @app.get("/api/health")

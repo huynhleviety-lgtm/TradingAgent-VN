@@ -203,7 +203,15 @@ Mode truy vấn: `global` (bối cảnh tổng thể) · `local` (entity/chunk g
 | Giao diện | Khởi chạy | URL |
 |---|---|---|
 | **App realtime** (`app/`) | `python app/start_backend.py` + `npm --prefix app/frontend run dev` | `http://localhost:3001` |
-| **Research/backtest** (`dashboard/`) | `npm --prefix dashboard run dev` | `http://localhost:8000` |
+| **Research/backtest** (`dashboard/`) | `npm --prefix dashboard run dev` | `http://localhost:8100` |
+
+Trang **Hệ thống** (`http://localhost:3001/system`) cho biết mọi thành phần đã sẵn sàng chưa:
+
+- **AI local:** Ollama có chạy không, model nào còn thiếu (kèm lệnh `ollama pull`).
+- **Dữ liệu:** phiên giá mới nhất, mã nào chưa cập nhật (nút *Đồng bộ*), số mã có chỉ số tài chính.
+- **Qlib:** lần chạy gần nhất, Rank IC ngoài mẫu, nút *Chạy Qlib*, và bảng xếp hạng các mã theo điểm mô hình.
+
+Backend chạy ở cổng 8000 (frontend chuyển tiếp `/api` tới đó), nên dashboard nghiên cứu dùng cổng 8100.
 | **MCP financial server** (tuỳ chọn) | `python -m ta_core.servers.financial_server` | — |
 
 

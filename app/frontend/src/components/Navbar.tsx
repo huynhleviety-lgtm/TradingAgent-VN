@@ -10,6 +10,7 @@ const navItems = [
   { href: "/", label: "Trang chủ" },
   { href: "/portfolio", label: "Danh mục" },
   { href: "/history", label: "Lịch sử" },
+  { href: "/system", label: "Hệ thống" },
 ];
 
 export function Navbar() {

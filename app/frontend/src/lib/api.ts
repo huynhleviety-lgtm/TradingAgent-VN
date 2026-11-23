@@ -5,6 +5,8 @@ import type {
   HistoryListItem,
   HistoryDetail,
   Workflow,
+  SystemStatus,
+  QlibScores,
 } from "./types";
 
 const API = ""; // proxied via next.config rewrites → http://localhost:8000
@@ -82,5 +84,33 @@ export async function getAnalysisJob(
   if (!res.ok) {
     throw new Error(`Không tải được job (HTTP ${res.status})`);
   }
+  return res.json();
+}
+
+export async function getSystemStatus(): Promise<SystemStatus> {
+  const res = await fetch(`${API}/api/system/status`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Không tải được trạng thái hệ thống");
+  return res.json();
+}
+
+export async function getQlibScores(limit = 100): Promise<QlibScores> {
+  const res = await fetch(`${API}/api/qlib/scores?limit=${limit}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Không tải được điểm Qlib");
+  return res.json();
+}
+
+export async function startQlibRefresh(): Promise<{ started: boolean; reason?: string }> {
+  const res = await fetch(`${API}/api/qlib/refresh`, { method: "POST" });
+  if (!res.ok) throw new Error("Không chạy được Qlib");
+  return res.json();
+}
+
+export async function syncMarket(tickers: string[]): Promise<Record<string, unknown>> {
+  const res = await fetch(`${API}/api/market/sync`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tickers, force: true, include_news: false }),
+  });
+  if (!res.ok) throw new Error("Không đồng bộ được giá");
   return res.json();
 }
