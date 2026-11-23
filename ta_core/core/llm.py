@@ -1,40 +1,65 @@
-import os
 import asyncio
 import atexit
 import random
+import re
 from typing import Any
 
 import aiohttp
-from dotenv import load_dotenv
 from config import models
 
-load_dotenv()
+# One OpenAI-compatible endpoint for every agent; Ollama by default (see config.py).
+API_KEY = models.llm_api_key
+BASE_URL = models.llm_base_url
+DEFAULT_MODEL = models.primary_model
 
-API_KEY = os.getenv("CLIPROXY_API_KEY")
-BASE_URL = os.getenv("CLIPROXY_BASE_URL", "http://127.0.0.1:8317/v1")
-DEFAULT_MODEL = os.getenv("GPT_MODEL", os.getenv("PRIMARY_MODEL", "coder-model"))
+# Reasoning models served by Ollama (Qwen3, DeepSeek-R1) put their reasoning in a
+# <think>...</think> block before the answer. Agents parse the answer, so it is
+# removed. The <thinking> tag some prompts ask for is a different tag and is kept.
+_THINK_BLOCK = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
 
-if BASE_URL and BASE_URL.endswith("/"):
-    BASE_URL = BASE_URL.rstrip("/")
+
+def _strip_think(content: str) -> str:
+    return _THINK_BLOCK.sub("", content).strip()
 
 # ---------------------------------------------------------------------------
-# Concurrency guard — only limits in-flight requests; NO RPM cap.
-# ProxyPal (with 50 accounts) handles rate distribution internally.
+# Concurrency guard — limits in-flight requests (LLM_CONCURRENCY). A local
+# Ollama server only runs a few requests in parallel (OLLAMA_NUM_PARALLEL).
 # ---------------------------------------------------------------------------
-
-_sem = asyncio.Semaphore(models.llm_concurrency)
 
 _session = None
+_session_loop = None
+_sem = None
+_sem_loop = None
+
+
+def _get_semaphore() -> asyncio.Semaphore:
+    """Per-event-loop semaphore: callers such as backtests run asyncio.run() repeatedly."""
+    global _sem, _sem_loop
+    loop = asyncio.get_running_loop()
+    if _sem is None or _sem_loop is not loop:
+        _sem = asyncio.Semaphore(models.llm_concurrency)
+        _sem_loop = loop
+    return _sem
 
 
 async def _get_session():
-    global _session
+    global _session, _session_loop
+    loop = asyncio.get_running_loop()
+    if _session is not None and not _session.closed and _session_loop is not loop:
+        # Session belongs to an earlier, possibly closed, event loop; it cannot be reused.
+        _session = None
     if _session is None or _session.closed:
+        _session_loop = loop
         connector = aiohttp.TCPConnector(
             limit=models.llm_concurrency + 10,
             keepalive_timeout=720,
         )
-        timeout = aiohttp.ClientTimeout(total=540, connect=30, sock_read=480)
+        # Local inference on CPU can be slow, so the read timeout is generous.
+        timeout = aiohttp.ClientTimeout(
+            total=models.llm_timeout_seconds,
+            connect=30,
+            sock_read=models.llm_timeout_seconds,
+        )
         _session = aiohttp.ClientSession(connector=connector, timeout=timeout)
     return _session
 
@@ -118,7 +143,7 @@ async def call_llm(
         for attempt in range(_MAX_RETRIES_SAME_MODEL):
             try:
                 session = await _get_session()
-                async with _sem:
+                async with _get_semaphore():
                     async with session.post(url, headers=headers, json=payload) as response:
                         if response.status == 429:
                             retry_after = response.headers.get("Retry-After")
@@ -155,10 +180,7 @@ async def call_llm(
 
                         if data and "choices" in data and len(data["choices"]) > 0:
                             content = data["choices"][0]["message"]["content"]
-                            if isinstance(content, str):
-                                content = content.strip()
-                            else:
-                                content = str(content)
+                            content = _strip_think(content if isinstance(content, str) else str(content))
 
                             if content.startswith("❌"):
                                 last_error = content

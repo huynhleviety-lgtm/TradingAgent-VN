@@ -22,7 +22,16 @@ load_dotenv(dotenv_path=_VNSTOCK_ENV)
 if not os.getenv("CLIPROXY_API_KEY"):
     load_dotenv(dotenv_path=_PROJECT_ROOT / ".env")
 
-MODEL_NAME = "coder-model"
+def _news_model() -> str:
+    try:
+        from config import models
+
+        return models.news_model
+    except Exception:  # pragma: no cover - config not importable
+        return os.getenv("NEWS_MODEL") or os.getenv("LLM_MODEL") or "qwen3:8b"
+
+
+MODEL_NAME = _news_model()
 
 
 def _build_prompt(articles: list[dict[str, Any]], agent_type: str, ticker: str | None) -> str:
@@ -72,7 +81,7 @@ async def summarize_for_agent(
 
 
 async def close_session() -> None:
-    """No-op — session is managed by vnstock.core.llm now."""
+    """No-op — session is managed by ta_core.core.llm now."""
     pass
 
 

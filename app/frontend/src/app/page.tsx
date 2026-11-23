@@ -33,7 +33,7 @@ export default function HomePage() {
 
   const heroChips = [
     { label: "Phiên", value: now.toLocaleDateString("vi-VN"), accent: "gold" as const },
-    { label: "Engine", value: "gpt-5.2", accent: "coral" as const },
+    { label: "Engine", value: "Ollama (local)", accent: "coral" as const },
     { label: "Agents", value: "5/5", accent: "green" as const },
   ];
 

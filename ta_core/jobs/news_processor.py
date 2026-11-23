@@ -47,7 +47,7 @@ class ClusterResult:
 
 
 class KimiJSONSummarizer:
-    """Wrapper reusing tracking_news summarizer session with JSON-only prompt."""
+    """JSON-only news sentiment summariser using the shared local LLM client."""
 
     def __init__(self) -> None:
         self.loop = asyncio.new_event_loop()
@@ -56,38 +56,22 @@ class KimiJSONSummarizer:
     async def _summarize(
         self, cluster_title: str, snippets: list[str], ticker: str
     ) -> str:
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "Output ONLY valid JSON with keys score (float -1..1), confidence (0..1), "
-                    "key_event (string). No markdown, no bullet, no explanation."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Ticker: {ticker}. Cluster representative: {cluster_title}.\n"
-                    "Provide sentiment JSON for these titles/snippets:\n"
-                    + "\n".join(snippets)
-                ),
-            },
-        ]
+        from ta_core.core.llm import call_llm
 
-        api_key = tsummarizer.os.getenv("CLIPROXY_API_KEY")
-        headers = {"Content-Type": "application/json"}
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
-
-        session = await tsummarizer._get_session()  # type: ignore[attr-defined]
-        async with session.post(
-            tsummarizer.PROXY_URL,
-            headers=headers,
-            json={"model": tsummarizer.MODEL_NAME, "messages": messages},
-        ) as resp:
-            resp.raise_for_status()
-            data = await resp.json()
-            return data["choices"][0]["message"]["content"].strip()
+        return await call_llm(
+            system_prompt=(
+                "Output ONLY valid JSON with keys score (float -1..1), confidence (0..1), "
+                "key_event (string). No markdown, no bullet, no explanation."
+            ),
+            user_prompt=(
+                f"Ticker: {ticker}. Cluster representative: {cluster_title}.\n"
+                "Provide sentiment JSON for these titles/snippets:\n"
+                + "\n".join(snippets)
+            ),
+            model=tsummarizer.MODEL_NAME,
+            temperature=0.1,
+            response_format={"type": "json_object"},
+        )
 
     def summarize(self, cluster_title: str, snippets: list[str], ticker: str) -> str:
         return self.loop.run_until_complete(

@@ -1,4 +1,5 @@
 import asyncio
+import re
 import sys
 
 from openai import AsyncOpenAI
@@ -11,6 +12,8 @@ class RateLimiter:
         self.max_calls = max_calls
         self.period = period
         self.semaphore = asyncio.Semaphore(max_calls)
+        # Caps in-flight requests separately; a local model serves only a few at once.
+        self.in_flight = asyncio.Semaphore(settings.MAX_CONCURRENCY)
         self.timestamps: list[float] = []
 
     async def acquire(self) -> None:
@@ -49,12 +52,13 @@ async def openai_complete_if_cache(
 
     await limiter.acquire()
     try:
-        response = await _client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            temperature=kwargs.get("temperature", 0.1),
-            max_tokens=kwargs.get("max_tokens", 4096),
-        )
+        async with limiter.in_flight:
+            response = await _client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                temperature=kwargs.get("temperature", 0.1),
+                max_tokens=kwargs.get("max_tokens", 4096),
+            )
     except asyncio.TimeoutError:
         print(
             f"[LLM TIMEOUT] model={model_name} exceeded {settings.LLM_TIMEOUT_SECONDS:.0f}s",
@@ -66,4 +70,7 @@ async def openai_complete_if_cache(
         return ""
 
     content = response.choices[0].message.content
-    return content.strip() if isinstance(content, str) else ""
+    if not isinstance(content, str):
+        return ""
+    # Drop the <think> block reasoning models (Qwen3, DeepSeek-R1) emit before the answer.
+    return re.sub(r"<think>.*?</think>\s*", "", content, flags=re.DOTALL).strip()

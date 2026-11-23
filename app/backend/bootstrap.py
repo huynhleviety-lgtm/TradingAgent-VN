@@ -33,34 +33,10 @@ os.environ.setdefault("CAFEF_ONLY_ARTICLE_FETCH_WORKERS", "6")
 os.environ.setdefault("CAFEF_ONLY_ARTICLE_RATE_LIMIT_SECONDS", "0.0")
 
 # ---------------------------------------------------------------------------
-# Force every model name to gpt-5.2, served by a local proxy.
-# Must run BEFORE config.py and ta_core/core/llm.py are imported, because both
-# read these env vars at module-import time.
+# LLM endpoint and models come from config.py (LLM_BASE_URL, LLM_MODEL, ...),
+# which default to a local Ollama server. Nothing is forced here, so the
+# backend and the CLI always use the same settings.
 # ---------------------------------------------------------------------------
-LLM_MODEL_OVERRIDE = "gpt-5.2"
-LLM_BASE_URL = "http://127.0.0.1:8317/v1"
-LLM_API_KEY = "sk-my-key-is-empty"
-
-os.environ["CLIPROXY_BASE_URL"] = LLM_BASE_URL
-os.environ["CLIPROXY_API_KEY"] = LLM_API_KEY
-# ta_core/core/llm.py reads GPT_MODEL or PRIMARY_MODEL for the default.
-os.environ["GPT_MODEL"] = LLM_MODEL_OVERRIDE
-os.environ["PRIMARY_MODEL"] = LLM_MODEL_OVERRIDE
-# config.ModelConfig fields (each agent tier).
-for _key in (
-    "FINANCIAL_MODEL",
-    "NEWS_MODEL",
-    "T2_MACRO", "T2_MACRO_PRIMARY",
-    "T2_NEWS", "T2_NEWS_PRIMARY",
-    "T2_FINANCIAL", "T2_FINANCIAL_PRIMARY",
-    "T2_TECHNICAL", "T2_TECHNICAL_PRIMARY",
-    "T2_QUANT", "T2_QUANT_PRIMARY",
-    "T3_DEBATE", "T3_DEBATE_PRIMARY",
-    "T3_ARGUMENT", "T3_ARGUMENT_PRIMARY",
-    "T4_CIO", "T4_CIO_PRIMARY",
-    "DAILY_REPORT", "DAILY_REPORT_PRIMARY",
-):
-    os.environ[_key] = LLM_MODEL_OVERRIDE
 
 # Match run.py path layout (NOT including cognitive_trading itself, since its config
 # shadows the root one). cognitive_trading is imported via the package name.
@@ -72,7 +48,7 @@ for extra in (ROOT, ROOT / "ta_core", ROOT / "tracking_news"):
 # ---------------------------------------------------------------------------
 # Disable chain-of-thought for FinancialAgent. Its prompt already carries a
 # 16k-char cached report; adding a CoT preamble pushes input past 20k tokens
-# and balloons response time to ~10 min on gpt-5.2 (~25x the other agents).
+# and balloons response time (~25x the other agents), worst on a local model.
 # We patch only the financial_agent module's bound reference so Macro/News/
 # Technical/Quant keep their CoT.
 # ---------------------------------------------------------------------------

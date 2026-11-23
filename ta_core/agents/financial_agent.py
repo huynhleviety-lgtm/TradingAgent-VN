@@ -165,7 +165,13 @@ class FinancialAgent:
                 FinancialAnalysisError,
                 generate_financial_report,
             )
+        except ImportError as exc:
+            # The financial-report RAG stack (LightRAG, sentence-transformers) is optional.
+            # Without it there is no report to read, which callers already handle as None.
+            print(f"[Financial Agent] Financial report RAG unavailable: {exc}", file=sys.stderr)
+            return None
 
+        try:
             artifact = await generate_financial_report(ticker.upper(), str(year), quarter_label)
         except FinancialAnalysisError:
             return None

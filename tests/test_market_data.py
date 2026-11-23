@@ -15,7 +15,7 @@ QUARTERS = ["2026-Q3", "2026-Q2", "2026-Q1", "2025-Q4", "2025-Q3", "2025-Q2", "2
 
 @pytest.fixture()
 def env(tmp_path, monkeypatch):
-    monkeypatch.setenv("VNSTOCK_DB_PATH", str(tmp_path / "vnstock.db"))
+    # Fresh vn-market-data cache per test (it is read on every connection).
     monkeypatch.setenv("VN_MARKET_DATA_DB", str(tmp_path / "vmd.db"))
 
     import vn_market_data as vmd
@@ -102,18 +102,20 @@ def test_quarterly_ratios(env):
 
 
 def test_crawler_sync_is_incremental(env):
-    _, tmp_path = env
-    from ta_core.database.models import init_db
+    from config import paths
+    from ta_core.database.models import MarketDataDaily, init_db
     from ta_core.jobs.crawler import MarketCrawler
 
     init_db()
     crawler = MarketCrawler()
+    crawler.repo.db.query(MarketDataDaily).delete()
+    crawler.repo.db.commit()
     crawler.benchmark_symbols = ["VNINDEX"]
     first = crawler.sync_tickers(["FPT"], max_requests_per_minute=0)
     second = crawler.sync_tickers(["FPT"], max_requests_per_minute=0)
     assert first["FPT"] > 0 and first["VNINDEX"] > 0 and first["FPT_RATIOS"] == len(QUARTERS)
     assert second["FPT"] == 0 and second["VNINDEX"] == 0
 
-    db = sqlite3.connect(tmp_path / "vnstock.db")
+    db = sqlite3.connect(paths.vnstock_db_path)
     name = db.execute("select company_name, icb_name2 from symbols where ticker='FPT'").fetchone()
     assert name == ("FPT Corp", "ICB2")

@@ -45,8 +45,17 @@
 
 ## Quick start
 
-**Yêu cầu:** Python `3.10+`, Node.js `20+`, và một LLM endpoint OpenAI-compatible (cho agent/RAG/CIO).
-GPU không bắt buộc — `requirements.txt` pin PyTorch CUDA 11.8; nếu không có CUDA hãy cài bản PyTorch CPU.
+**Yêu cầu:** Python `3.10+`, Node.js `20+`, và [Ollama](https://ollama.com) chạy trên máy (AI local, miễn phí).
+GPU không bắt buộc — `requirements.txt` dùng PyTorch bản thường (CPU); có GPU NVIDIA thì cài bản CUDA theo ghi chú trong file.
+
+**Ollama (Windows 11):** cài Ollama, rồi tải model:
+
+```powershell
+ollama pull qwen3:8b      # model mặc định cho mọi agent (~5 GB, cần ~8 GB RAM/VRAM)
+ollama pull qwen3:14b     # tuỳ chọn, cho debate + CIO (đặt LLM_REASONING_MODEL)
+```
+
+Ollama tự chạy ở `http://127.0.0.1:11434`. Máy chỉ có CPU sẽ chậm: dùng `qwen3:4b` và giữ `LLM_CONCURRENCY=1`.
 
 ```bash
 # 1. Clone
@@ -88,12 +97,15 @@ npm --prefix app/frontend run dev  # frontend → http://localhost:3001
 `config.py` đọc file `.env` ở root. Tạo `.env` với các biến tối thiểu:
 
 ```env
-# LLM (OpenAI-compatible)
-CLIPROXY_BASE_URL=http://127.0.0.1:8317/v1
-CLIPROXY_API_KEY=your-api-key-here
-PRIMARY_MODEL=gpt-5.2
-FINANCIAL_MODEL=gpt-5.2
-NEWS_MODEL=gpt-5.2
+# AI local qua Ollama (OpenAI-compatible). Đây cũng là giá trị mặc định.
+LLM_BASE_URL=http://127.0.0.1:11434/v1
+LLM_API_KEY=ollama                 # Ollama bỏ qua key, nhưng client cần một giá trị
+LLM_MODEL=qwen3:8b                 # dùng cho mọi agent
+# LLM_REASONING_MODEL=qwen3:14b    # tuỳ chọn: model lớn hơn cho debate + CIO
+LLM_CONCURRENCY=2                  # nên bằng OLLAMA_NUM_PARALLEL
+LLM_TIMEOUT_SECONDS=900
+# Ghi đè từng agent nếu muốn: T2_MACRO, T2_NEWS, T2_FINANCIAL, T2_TECHNICAL,
+# T2_QUANT, T3_DEBATE, T3_ARGUMENT, T4_CIO, DAILY_REPORT, NEWS_MODEL, ...
 
 # Paths (có default, chỉ sửa nếu cần)
 DATA_DIR=data

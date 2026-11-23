@@ -65,32 +65,69 @@ class WorkflowWeights:
     kelly_max_weight_pct: float = float(os.getenv("KELLY_MAX_WEIGHT_PCT", 40.0))
 
 
+# ---------------------------------------------------------------------------
+# Local AI (Ollama). Every agent talks to one OpenAI-compatible endpoint.
+# Defaults point at Ollama on this machine; set LLM_BASE_URL / LLM_API_KEY to
+# use any other OpenAI-compatible server. CLIPROXY_* are still read for
+# backward compatibility when the LLM_* variables are not set.
+# ---------------------------------------------------------------------------
+OLLAMA_DEFAULT_BASE_URL = "http://127.0.0.1:11434/v1"
+DEFAULT_LOCAL_MODEL = "qwen3:8b"
+
+
+def _llm_base_url() -> str:
+    raw = os.getenv("LLM_BASE_URL") or os.getenv("CLIPROXY_BASE_URL") or OLLAMA_DEFAULT_BASE_URL
+    return raw.rstrip("/")
+
+
+def _llm_api_key() -> str:
+    # Ollama ignores the key but OpenAI-compatible clients require one.
+    return os.getenv("LLM_API_KEY") or os.getenv("CLIPROXY_API_KEY") or "ollama"
+
+
+def _model(*names: str, default: str | None = None) -> str:
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return default or os.getenv("LLM_MODEL") or DEFAULT_LOCAL_MODEL
+
+
 @dataclass(frozen=True)
 class ModelConfig:
-    primary_model: str = os.getenv("PRIMARY_MODEL", "coder-model")
-    financial_model: str = os.getenv("FINANCIAL_MODEL", "coder-model")
-    news_model: str = os.getenv("NEWS_MODEL", "coder-model")
+    """Model per role. Each falls back to LLM_MODEL, so one variable sets them all.
 
-    # Tier 2
-    t2_macro_model: str = os.getenv("T2_MACRO", os.getenv("T2_MACRO_PRIMARY", "gpt-5.2"))
-    t2_news_model: str = os.getenv("T2_NEWS", os.getenv("T2_NEWS_PRIMARY", "gpt-5.2"))
-    t2_financial_model: str = os.getenv("T2_FINANCIAL", os.getenv("T2_FINANCIAL_PRIMARY", "coder-model"))
-    t2_technical_model: str = os.getenv("T2_TECHNICAL", os.getenv("T2_TECHNICAL_PRIMARY", "coder-model"))
-    t2_quant_model: str = os.getenv("T2_QUANT", os.getenv("T2_QUANT_PRIMARY", "coder-model"))
+    LLM_REASONING_MODEL (if set) is used for the debate and CIO roles, which
+    benefit most from a larger model, e.g. LLM_MODEL=qwen3:8b and
+    LLM_REASONING_MODEL=qwen3:14b.
+    """
 
-    # Tier 3
-    t3_debate_model: str = os.getenv("T3_DEBATE", os.getenv("T3_DEBATE_PRIMARY", "gpt-5.2"))
-    t3_argument_model: str = os.getenv("T3_ARGUMENT", os.getenv("T3_ARGUMENT_PRIMARY", "gpt-5.2"))
+    primary_model: str = _model("PRIMARY_MODEL")
+    financial_model: str = _model("FINANCIAL_MODEL")
+    news_model: str = _model("NEWS_MODEL")
 
-    # Tier 4
-    t4_cio_model: str = os.getenv("T4_CIO", os.getenv("T4_CIO_PRIMARY", "gpt-5.2"))
+    # Tier 2: analysts
+    t2_macro_model: str = _model("T2_MACRO", "T2_MACRO_PRIMARY")
+    t2_news_model: str = _model("T2_NEWS", "T2_NEWS_PRIMARY")
+    t2_financial_model: str = _model("T2_FINANCIAL", "T2_FINANCIAL_PRIMARY")
+    t2_technical_model: str = _model("T2_TECHNICAL", "T2_TECHNICAL_PRIMARY")
+    t2_quant_model: str = _model("T2_QUANT", "T2_QUANT_PRIMARY")
+
+    # Tier 3: debate
+    t3_debate_model: str = _model("T3_DEBATE", "T3_DEBATE_PRIMARY", "LLM_REASONING_MODEL")
+    t3_argument_model: str = _model("T3_ARGUMENT", "T3_ARGUMENT_PRIMARY", "LLM_REASONING_MODEL")
+
+    # Tier 4: CIO
+    t4_cio_model: str = _model("T4_CIO", "T4_CIO_PRIMARY", "LLM_REASONING_MODEL")
 
     # Daily report
-    daily_report_model: str = os.getenv("DAILY_REPORT", os.getenv("DAILY_REPORT_PRIMARY", "gpt-5.2"))
+    daily_report_model: str = _model("DAILY_REPORT", "DAILY_REPORT_PRIMARY")
 
-    llm_concurrency: int = int(os.getenv("LLM_CONCURRENCY", 100))
-    cliproxy_base_url: str | None = os.getenv("CLIPROXY_BASE_URL")
-    cliproxy_api_key: str | None = os.getenv("CLIPROXY_API_KEY")
+    # A local model serves a few requests at a time; match OLLAMA_NUM_PARALLEL.
+    llm_concurrency: int = int(os.getenv("LLM_CONCURRENCY", 2))
+    llm_base_url: str = field(default_factory=_llm_base_url)
+    llm_api_key: str = field(default_factory=_llm_api_key)
+    llm_timeout_seconds: float = float(os.getenv("LLM_TIMEOUT_SECONDS", 900))
 
 
 @dataclass(frozen=True)
